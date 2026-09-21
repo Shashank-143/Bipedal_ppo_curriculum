@@ -31,7 +31,10 @@ class DifficultWrapper(gym.Wrapper):
             reward = -100 * self.fall_penalty
         return obs, reward, terminated, truncated, info
     
-def make_env(gravity=1.0, friction=None, fall_penalty=1.0, render= False):
+def make_env(gravity=1.0, friction=None, fall_penalty=1.0, render=False, hardcore=False):
+    if hardcore:
+        gravity = max(gravity, 1.5)
+        friction = 2.5 if friction is None else friction
     env = gym.make("BipedalWalker-v3", render_mode="rgb_array" if render else None)
     return DifficultWrapper(env, gravity=gravity, friction=friction, fall_penalty=fall_penalty)
 
