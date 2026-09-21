@@ -5,9 +5,7 @@ import torch.nn as nn
 class Normalizer:
     """
     Keeps a running avg of obs & rescales them to be
-    mean 0 and std 1.
-
-    The no.s are saved inside every checkpoint.
+    mean 0 and std 1. The no.s are saved inside every checkpoint.
     """
 
     def __init__(self, size = 24):

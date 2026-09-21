@@ -17,56 +17,55 @@ class PPO:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
 
-        def collect(self, env, obs, normalizer, n_steps=2048):
-            """
+    def collect(self, env, obs, normalizer, n_steps=2048):
+        """
             Performs n_steps of interaction with the environment, collecting observations, actions, rewards, and values.
             """
-            states, actions, rewards, dones, values, log_probs = [], [], [], [], [], []
-            finished_scores = []
+        states, actions, rewards, dones, values, log_probs = [], [], [], [], [], []
+        finished_scores = []
 
-            for _ in range(n_steps):
-                normalizer.update(obs)
-                state = torch.as_tensor(normalizer.normalize(obs), dtype=torch.float32).to(self.device)
+        for _ in range(n_steps):
+            normalizer.update(obs)
+            state = torch.as_tensor(normalizer.normalize(obs), dtype=torch.float32).to(self.device)
 
-                with torch.no_grad():
-                    dist = self.model.action_distribution(state)
-                    action = dist.sample()
-                    log_prob = dist.log_prob(action).sum()
-                    value = self.model.value(state)
-
-                # Torque acceptable range is [-1, 1]
-                next_obs, reward, terminated, truncated, info = env.step(np.clip(action.cpu().numpy(), -1, 1))
-                done = terminated or truncated
-
-                states.append(state.cpu().numpy())
-                actions.append(action.cpu().numpy())
-                log_probs.append(log_prob.cpu().numpy())
-                rewards.append(reward * REWARD_SCALE)
-                dones.append(done)
-                values.append(value.cpu().numpy())
-
-                self.episode_score += info["raw_reward"]
-                if done:
-                    finished_scores.append(self.episode_score)
-                    self.episode_score = 0.0
-                    obs, _ = env.reset()
-
-                else:
-                    obs = next_obs
-
-            last_stage = torch.as_tensor(normalizer.normalize(obs), dtype=torch.float32).to(self.device)
             with torch.no_grad():
-                last_value = self.model.value(last_stage).cpu().numpy()
+                dist = self.model.action_distribution(state)
+                action = dist.sample()
+                log_prob = dist.log_prob(action).sum()
+                value = self.model.value(state)
 
-            advantages, returns = self.compute_advantages(rewards, dones, values, last_value)
-            batch = {
-                "states": torch.as_tensor(np.array(states), dtype=torch.float32),
-                "actions": torch.as_tensor(np.array(actions), dtype=torch.float32),
-                "log_probs": torch.as_tensor(np.array(log_probs), dtype=torch.float32),
-                "advantages": torch.as_tensor(advantages, dtype=torch.float32),
-                "returns": torch.as_tensor(returns, dtype=torch.float32),
-            }
-            return obs, batch, finished_scores
+            next_obs, reward, terminated, truncated, info = env.step(np.clip(action.cpu().numpy(), -1, 1))
+            done = terminated or truncated
+
+            states.append(state.cpu().numpy())
+            actions.append(action.cpu().numpy())
+            log_probs.append(log_prob.cpu().numpy())
+            rewards.append(reward * REWARD_SCALE)
+            dones.append(done)
+            values.append(value.cpu().numpy())
+
+            self.episode_score += info["raw_reward"]
+            if done:
+                finished_scores.append(self.episode_score)
+                self.episode_score = 0.0
+                obs, _ = env.reset()
+
+            else:
+                obs = next_obs
+
+        last_stage = torch.as_tensor(normalizer.normalize(obs), dtype=torch.float32).to(self.device)
+        with torch.no_grad():
+            last_value = self.model.value(last_stage).cpu().numpy()
+
+        advantages, returns = self.compute_advantages(rewards, dones, values, last_value)
+        batch = {
+            "states": torch.as_tensor(np.array(states), dtype=torch.float32),
+            "actions": torch.as_tensor(np.array(actions), dtype=torch.float32),
+            "log_probs": torch.as_tensor(np.array(log_probs), dtype=torch.float32),
+            "advantages": torch.as_tensor(advantages, dtype=torch.float32),
+            "returns": torch.as_tensor(returns, dtype=torch.float32),
+        }
+        return obs, batch, finished_scores
 
     def compute_advantages(self, rewards, dones, values, last_value):
         """

@@ -12,14 +12,14 @@ CHECKPOINT_DIR = Path("checkpoints")
 STEPS_PER_UPDATE = 2048
 MAX_STEPS_PER_RANGE = 300_000
 
-def train(total_steps=1_000_000, seed= 0):
+def train(total_steps=1_000_000, learning_rate=3e-4, seed=0):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     curriculum = Curriculum(STAGES)
     model = ActorCritic()
     normalizer = Normalizer()
-    ppo = PPO(model)
+    ppo = PPO(model, lr=learning_rate)
 
     env = make_env(**curriculum.env_settings())
     obs, _ = env.reset()
@@ -43,7 +43,7 @@ def train(total_steps=1_000_000, seed= 0):
         log.writerow([steps, curriculum.stage["name"], avg_score, sum(finished_scores)])
         log_file.flush()
         if update_number % 5 == 0:
-            print(f"Step: {steps:>9,}, Stage: {curriculum.stage['name']}, Average Score: {avg_score:7.1f>11}, Episode Score: {sum(finished_scores):7.1f}")
+            print(f"Step: {steps:>9,}, Stage: {curriculum.stage['name']}, Average Score: {avg_score:11.1f}, Episode Score: {sum(finished_scores):7.1f}")
 
         is_last_stage = curriculum.index == len(curriculum.stages) - 1
         stuck_in_stage = steps_in_stage >= MAX_STEPS_PER_RANGE and not is_last_stage
@@ -53,9 +53,9 @@ def train(total_steps=1_000_000, seed= 0):
 
         if curriculum.ready_to_promote():
             finished = curriculum.index + 1
-            save_model(CHECKPOINT_DIR / f"model_stage_{finished}.pt", model, normalizer)
-            print(f"Finished stage {finished}. Promoting to stage {curriculum.index + 1}.")
-            print(f"Saving model to {CHECKPOINT_DIR / f'model_stage_{finished}.pt'}")
+            save_model(CHECKPOINT_DIR / f"model_stage_{finished}.pth", model, normalizer)
+            print(f"Finished stage {finished}. Promoting to stage {curriculum.index + 2}.")
+            print(f"Saving model to {CHECKPOINT_DIR / f'model_stage_{finished}.pth'}")
             curriculum.promote()
             print(f"Promoted to stage {curriculum.index + 1}: {curriculum.stage['name']}")
 
@@ -64,7 +64,7 @@ def train(total_steps=1_000_000, seed= 0):
             obs, _ = env.reset()
             ppo.episode_score, steps_in_stage = 0.0, 0
 
-    final_name = "model_stage_final.pt"
+    final_name = "model_stage_final.pth"
     save_model(CHECKPOINT_DIR / final_name, model, normalizer)
     log_file.close()
     print(f"Training completed after {steps:,} steps. Saving final model to {CHECKPOINT_DIR / final_name}")
