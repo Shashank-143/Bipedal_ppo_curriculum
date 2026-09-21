@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+runs/
+.cache/
+checkpoints/*.pth
+videos/
