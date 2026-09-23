@@ -78,7 +78,7 @@ def save_model(path, model, normalizer):
     }, path)
 
 def load_policy(path):
-    data = torch.load(path, map_location=torch.device("cpu"))
+    data = torch.load(path, map_location=torch.device("cpu"),weights_only=False)
     model = ActorCritic()
     model.load_state_dict(data["model"])
     model.eval()

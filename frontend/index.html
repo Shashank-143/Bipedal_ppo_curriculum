@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bipedal AI Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">✦</div>
+        <div><strong>Bipedal AI</strong><span>Research Console</span></div>
+      </div>
+      <nav id="nav">
+        <button class="nav-item active" data-view="overview">⌂ <span>Overview</span></button>
+        <button class="nav-item" data-view="evaluate">▶ <span>Evaluation Lab</span></button>
+        <button class="nav-item" data-view="showdown">⇄ <span>Policy Showdown</span></button>
+        <button class="nav-item" data-view="stress">⌁ <span>Stress Testing</span></button>
+        <button class="nav-item" data-view="analytics">◫ <span>Torque Analytics</span></button>
+        <button class="nav-item" data-view="curriculum">◈ <span>Curriculum</span></button>
+        <button class="nav-item" data-view="history">◷ <span>Experiment History</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="status-pill"><span id="healthDot"></span><span id="healthText">Checking API...</span></div>
+        <button class="ghost-btn" id="themeToggle">☾ Toggle theme</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">REINFORCEMENT LEARNING / CONTROL SYSTEMS</div>
+          <h1 id="pageTitle">Overview</h1>
+          <p id="pageSubtitle">Inspect, evaluate, and compare your trained bipedal policies.</p>
+        </div>
+        <div class="top-actions">
+          <button class="secondary-btn" id="refreshBtn">↻ Refresh</button>
+          <button class="primary-btn" data-go="evaluate">+ New Evaluation</button>
+        </div>
+      </header>
+
+      <section id="view-overview" class="view active">
+        <div class="hero-card">
+          <div>
+            <span class="badge">LOCAL CONTROL CENTER</span>
+            <h2>Explore how your agent walks.</h2>
+            <p>Run controlled episodes, inspect movement quality, compare policies, and analyze action patterns using your existing FastAPI backend.</p>
+            <div class="hero-actions">
+              <button class="primary-btn" data-go="evaluate">Run an episode →</button>
+              <button class="secondary-btn" data-go="showdown">Compare policies</button>
+            </div>
+          </div>
+          <div class="hero-orbit"><div class="orbit-ring"></div><div class="robot">◒</div></div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-card"><span>API Status</span><strong id="mHealth">—</strong><small id="mHealthSub">Awaiting response</small></div>
+          <div class="metric-card"><span>Checkpoints</span><strong id="mPolicies">—</strong><small>Discovered from backend</small></div>
+          <div class="metric-card"><span>Last Score</span><strong id="mScore">—</strong><small id="mScoreSub">No evaluation yet</small></div>
+          <div class="metric-card"><span>Last Distance</span><strong id="mDistance">—</strong><small id="mDistanceSub">No evaluation yet</small></div>
+        </div>
+
+        <div class="content-grid two">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Available Checkpoints</h3><p>Select a policy to inspect or evaluate.</p></div><span class="panel-tag" id="checkpointCount">0 models</span></div>
+            <div id="checkpointList" class="checkpoint-list empty">Loading checkpoints...</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Quick Actions</h3><p>Jump directly into an experiment.</p></div></div>
+            <div class="quick-grid">
+              <button class="quick-card" data-go="evaluate"><b>▶</b><span>Evaluate policy</span><small>Video + metrics</small></button>
+              <button class="quick-card" data-go="showdown"><b>⇄</b><span>Policy showdown</span><small>Side-by-side comparison</small></button>
+              <button class="quick-card" data-go="stress"><b>⌁</b><span>Stress test</span><small>Gravity + friction</small></button>
+              <button class="quick-card" data-go="analytics"><b>◫</b><span>Analyze torque</span><small>Action signal charts</small></button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Recent Experiments</h3><p>Saved locally in this browser.</p></div><button class="text-btn" data-go="history">View all →</button></div>
+          <div id="recentExperiments" class="history-table"></div>
+        </div>
+      </section>
+
+      <section id="view-evaluate" class="view">
+        <div class="content-grid two">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Episode Configuration</h3><p>Configure and launch a policy evaluation.</p></div></div>
+            <label>Checkpoint<select id="evalPolicy"></select></label>
+            <label>Gravity <output id="evalGravityOut">1.00</output><input id="evalGravity" type="range" min=".5" max="1.5" step=".05" value="1"></label>
+            <label>Friction <output id="evalFrictionOut">2.50</output><input id="evalFriction" type="range" min=".2" max="3" step=".1" value="2.5"></label>
+            <label>Seed<input id="evalSeed" type="number" value="7"></label>
+            <div class="preset-row">
+              <button class="chip" data-preset="normal">Normal</button><button class="chip" data-preset="lowGravity">Low gravity</button><button class="chip" data-preset="highGravity">High gravity</button><button class="chip" data-preset="lowFriction">Low friction</button>
+            </div>
+            <button class="primary-btn wide" id="runEval">▶ Run evaluation</button>
+            <div id="evalMessage" class="message"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Episode Result</h3><p>Metrics returned by your backend.</p></div><span id="evalStatus" class="badge neutral">Waiting</span></div>
+            <div id="evalMetrics" class="result-metrics"></div>
+            <video id="evalVideo" class="video" controls></video>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-showdown" class="view">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Policy Showdown</h3><p>Evaluate two checkpoints using the same seed.</p></div></div>
+          <div class="form-grid">
+            <label>Policy A<select id="leftPolicy"></select></label>
+            <label>Policy B<select id="rightPolicy"></select></label>
+            <label>Seed<input id="showSeed" type="number" value="7"></label>
+            <label class="check-label"><input id="hardcore" type="checkbox"> Hardcore mode</label>
+          </div>
+          <button class="primary-btn" id="runShowdown">⇄ Run showdown</button>
+          <div id="showMessage" class="message"></div>
+        </div>
+        <div id="showResults" class="content-grid two"></div>
+      </section>
+
+      <section id="view-stress" class="view">
+        <div class="content-grid two">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Stress Scenario</h3><p>Probe policy behavior under environmental changes.</p></div></div>
+            <label>Checkpoint<select id="stressPolicy"></select></label>
+            <label>Gravity <output id="stressGravityOut">1.00</output><input id="stressGravity" type="range" min=".5" max="1.5" step=".05" value="1"></label>
+            <label>Friction <output id="stressFrictionOut">2.50</output><input id="stressFriction" type="range" min=".2" max="3" step=".1" value="2.5"></label>
+            <label>Seed<input id="stressSeed" type="number" value="7"></label>
+            <div class="preset-row"><button class="chip" data-stress="baseline">Baseline</button><button class="chip" data-stress="heavy">Heavy gravity</button><button class="chip" data-stress="slippery">Slippery</button><button class="chip" data-stress="sticky">High friction</button></div>
+            <button class="primary-btn wide" id="runStress">⌁ Run stress test</button>
+            <div id="stressMessage" class="message"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Stress Result</h3><p>Observe score degradation and stability.</p></div><span id="stressStatus" class="badge neutral">Waiting</span></div>
+            <div id="stressMetrics" class="result-metrics"></div>
+            <video id="stressVideo" class="video" controls></video>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-analytics" class="view">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Torque / Action Analytics</h3><p>Explore the four action channels from the latest evaluation.</p></div><button class="secondary-btn" id="downloadTorque">Download CSV</button></div>
+          <div class="chart-wrap"><canvas id="torqueChart"></canvas></div>
+          <div id="torqueStats" class="metric-grid compact"></div>
+        </div>
+      </section>
+
+      <section id="view-curriculum" class="view">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Curriculum Explorer</h3><p>Configured stages from your curriculum file.</p></div></div>
+          <div class="stage-track">
+            <div class="stage active"><b>01</b><span>Beginner</span><small>Gravity 0.10</small></div>
+            <div class="stage"><b>02</b><span>Intermediate</span><small>Gravity 0.50</small></div>
+            <div class="stage"><b>03</b><span>Advanced</span><small>Gravity 0.75</small></div>
+            <div class="stage"><b>04</b><span>Expert</span><small>Gravity 1.00</small></div>
+          </div>
+          <div class="table-scroll"><table><thead><tr><th>Stage</th><th>Gravity</th><th>Fall penalty</th><th>Promotion threshold</th></tr></thead><tbody>
+            <tr><td>Stage 1: Beginner</td><td>0.10</td><td>0.10</td><td>100</td></tr>
+            <tr><td>Stage 2: Intermediate</td><td>0.50</td><td>0.50</td><td>150</td></tr>
+            <tr><td>Stage 3: Advanced</td><td>0.75</td><td>0.75</td><td>250</td></tr>
+            <tr><td>Stage 4: Expert</td><td>1.00</td><td>1.00</td><td>Final stage</td></tr>
+          </tbody></table></div>
+          <div class="info-banner">The curriculum display is based on the configured stages. The current live training stage is not exposed by the existing API.</div>
+        </div>
+      </section>
+
+      <section id="view-history" class="view">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Experiment History</h3><p>Browser-local evaluation records.</p></div><div><button class="secondary-btn" id="exportHistory">Export CSV</button><button class="danger-btn" id="clearHistory">Clear</button></div></div>
+          <div id="fullHistory" class="history-table"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
