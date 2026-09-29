@@ -40,6 +40,7 @@ def play_and_record(checkpoint, seed, **settings):
         "score": round(result["score"], 2),
         "steps": result["steps"],
         "distance": round(result["distance"], 2),
+        "fell": result["fell"],
         "passed": result["score"] >= PASS_SCORE and not result["fell"],
         "torques": [[round(t, 2) for t in torque] for torque in result["torques"]],
     }

@@ -10,7 +10,7 @@ class DifficultWrapper(gym.Wrapper):
         self.start_x= 0.0 
 
     def reset(self, **kwargs):
-        self.env.unwrapped.gravity = (0, -10 * self.gravity)
+        self.env.unwrapped.world.gravity = (0, -10 * self.gravity)
         obs, info = self.env.reset(**kwargs)
 
         if self.friction is not None:
