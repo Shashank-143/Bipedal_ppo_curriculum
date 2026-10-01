@@ -35,7 +35,9 @@ function fillSelect(id){
 }
 function fillAllSelects(){["evalPolicy","leftPolicy","rightPolicy","stressPolicy"].forEach(fillSelect);if(policies.length>1)$("rightPolicy").value=policies[1]}
 function setRange(id,out){$(id).addEventListener("input",()=>$(out).textContent=Number($(id).value).toFixed(2))}
-setRange("evalGravity","evalGravityOut");setRange("evalFriction","evalFrictionOut");setRange("stressGravity","stressGravityOut");setRange("stressFriction","stressFrictionOut");
+setRange("evalGravity","evalGravityOut");setRange("evalFriction","evalFrictionOut");
+setRange("showGravity","showGravityOut");setRange("showFriction","showFrictionOut");
+setRange("stressGravity","stressGravityOut");setRange("stressFriction","stressFrictionOut");
 
 async function health(){
   try{const h=await api("/health");$("healthDot").style.background="var(--good)";$("healthText").textContent="API healthy";$("mHealth").textContent="Online";$("mHealthSub").textContent=h.status||"healthy"}
@@ -46,12 +48,44 @@ async function loadPolicies(){
   $("checkpointList").classList.remove("empty");$("checkpointList").innerHTML=policies.map(p=>`<div class="checkpoint"><div><b>${escapeHtml(p.replaceAll("_"," "))}</b><small> · .pth checkpoint</small></div><button class="chip" data-policy="${escapeHtml(p)}">Use</button></div>`).join("");
   }catch(e){$("checkpointList").textContent=e.message}
 }
+async function loadCurriculum(){
+  const fallback=[
+    {name:"Stage 1: Beginner",gravity:0.6,friction:2.50,fall_penalty:0.1,promote_at:100},
+    {name:"Stage 2: Intermediate",gravity:0.75,friction:2.00,fall_penalty:0.5,promote_at:150},
+    {name:"Stage 3: Advanced",gravity:0.9,friction:1.50,fall_penalty:0.5,promote_at:200},
+    {name:"Stage 4: Expert",gravity:1.0,friction:1.00,fall_penalty:0.75,promote_at:null}
+  ];
+  let stages=fallback;
+  try{stages=await api("/api/curriculum");}catch(e){console.warn("Using fallback curriculum:",e);}
+  const trackEl=$("stageTrack");
+  if(trackEl&&stages&&stages.length){
+    trackEl.innerHTML=stages.map((s,i)=>`<div class="stage ${i===0?'active':''}"><b>0${i+1}</b><span>${escapeHtml(s.name.replace(/^Stage \d+:\s*/,''))}</span><small>Friction ${Number(s.friction).toFixed(2)} · Gravity ${Number(s.gravity).toFixed(2)}</small></div>`).join("");
+  }
+  const tableBody=$("curriculumTableBody");
+  if(tableBody&&stages&&stages.length){
+    tableBody.innerHTML=stages.map(s=>`<tr><td><strong>${escapeHtml(s.name)}</strong></td><td><span class="badge" style="background:#7c6cff22;color:var(--primary);">${Number(s.friction).toFixed(2)}</span></td><td>${Number(s.gravity).toFixed(2)}</td><td>${Number(s.fall_penalty).toFixed(2)}</td><td>${s.promote_at?s.promote_at:'Final stage'}</td></tr>`).join("");
+  }
+}
 $("checkpointList").addEventListener("click",e=>{const b=e.target.closest("[data-policy]");if(!b)return;$("evalPolicy").value=b.dataset.policy;go("evaluate")});
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 
-function metricsHtml(r){return [["Score",r.score],["Distance",r.distance],["Steps",r.steps],["Passed",r.passed?"Yes":"No"],["Fell",r.fell?"Yes":"No"],["Policy",r.name]].map(x=>`<div class="result-metric"><span>${x[0]}</span><strong>${escapeHtml(x[1])}</strong></div>`).join("")}
+function metricsHtml(r){
+  const items=[
+    ["Score",r.score],
+    ["Distance",r.distance],
+    ["Steps",r.steps],
+    ["Friction",r.friction!==undefined?Number(r.friction).toFixed(2):"—"],
+    ["Gravity",r.gravity!==undefined?Number(r.gravity).toFixed(2):"—"],
+    ["Passed",r.passed?"Yes":"No"],
+    ["Fell",r.fell?"Yes":"No"],
+    ["Policy",r.name]
+  ];
+  return items.map(x=>`<div class="result-metric"><span>${x[0]}</span><strong>${escapeHtml(x[1])}</strong></div>`).join("");
+}
 function saveRecord(type,request,result){
-  const record={id:Date.now(),time:new Date().toLocaleString(),type,...request,result};
+  const friction=result.friction!==undefined?result.friction:(request.friction!==undefined?request.friction:2.5);
+  const gravity=result.gravity!==undefined?result.gravity:(request.gravity!==undefined?request.gravity:1.0);
+  const record={id:Date.now(),time:new Date().toLocaleString(),type,friction,gravity,...request,result};
   history.unshift(record);history=history.slice(0,100);localStorage.setItem("bipedalHistory",JSON.stringify(history));renderHistory();updateOverview(result);
 }
 function updateOverview(r){lastResult=r;$("mScore").textContent=r.score;$("mScoreSub").textContent=r.passed?"Passed evaluation":"Evaluation completed";$("mDistance").textContent=r.distance;$("mDistanceSub").textContent=`${r.steps} steps`;$("mScore").style.color=r.passed?"var(--good)":"var(--text)";renderTorque(r.torques||[])}
@@ -88,7 +122,7 @@ document.querySelectorAll("[data-stress]").forEach(b=>b.onclick=()=>{
 $("runShowdown").onclick=async()=>{
   setMessage("showMessage","Running both policies...");$("runShowdown").disabled=true;
   try{
-    const request={left:$("leftPolicy").value,right:$("rightPolicy").value,seed:+$("showSeed").value,hardcore:$("hardcore").checked};
+    const request={left:$("leftPolicy").value,right:$("rightPolicy").value,gravity:+$("showGravity").value,friction:+$("showFriction").value,seed:+$("showSeed").value,hardcore:$("hardcore").checked};
     const results=await api("/api/showdown",{method:"POST",body:JSON.stringify(request)});
     $("showResults").innerHTML=results.map((r,i)=>`<div class="show-card"><h3>${i===0?"Policy A":"Policy B"} · ${escapeHtml(r.name)}</h3><div class="result-metrics">${metricsHtml(r)}</div><video controls src="${r.video_url}"></video></div>`).join("");
     results.forEach(r=>saveRecord("showdown",request,r));setMessage("showMessage","Showdown completed.");
@@ -108,15 +142,29 @@ $("downloadTorque").onclick=()=>{
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download="torque_analysis.csv";a.click();URL.revokeObjectURL(a.href);
 };
 function renderHistory(){
-  const html=history.length?`<table><thead><tr><th>Time</th><th>Type</th><th>Policy</th><th>Score</th><th>Distance</th><th>Steps</th><th>Fall</th></tr></thead><tbody>${history.map(h=>`<tr><td>${escapeHtml(h.time)}</td><td>${h.type}</td><td>${escapeHtml(h.result.name)}</td><td>${h.result.score}</td><td>${h.result.distance}</td><td>${h.result.steps}</td><td>${h.result.fell?"Yes":"No"}</td></tr>`).join("")}</tbody></table>`:"<div class='empty'>No experiments saved yet.</div>";
+  const html=history.length?`<table><thead><tr><th>Time</th><th>Type</th><th>Policy</th><th>Friction</th><th>Gravity</th><th>Score</th><th>Distance</th><th>Steps</th><th>Fall</th></tr></thead><tbody>${history.map(h=>{
+    const f=h.friction!==undefined?Number(h.friction).toFixed(2):(h.result&&h.result.friction!==undefined?Number(h.result.friction).toFixed(2):"—");
+    const g=h.gravity!==undefined?Number(h.gravity).toFixed(2):(h.result&&h.result.gravity!==undefined?Number(h.result.gravity).toFixed(2):"—");
+    return `<tr><td>${escapeHtml(h.time)}</td><td>${h.type}</td><td>${escapeHtml(h.result.name)}</td><td><span class="badge" style="background:#7c6cff22;color:var(--primary);">${f}</span></td><td>${g}</td><td>${h.result.score}</td><td>${h.result.distance}</td><td>${h.result.steps}</td><td>${h.result.fell?"Yes":"No"}</td></tr>`;
+  }).join("")}</tbody></table>`:"<div class='empty'>No experiments saved yet.</div>";
   $("recentExperiments").innerHTML=html;$("fullHistory").innerHTML=html;
 }
 $("clearHistory").onclick=()=>{if(confirm("Clear all local experiment history?")){history=[];localStorage.removeItem("bipedalHistory");renderHistory()}};
 $("exportHistory").onclick=()=>{
-  const rows=["time,type,policy,score,distance,steps,fell",...history.map(h=>[h.time,h.type,h.result.name,h.result.score,h.result.distance,h.result.steps,h.result.fell].map(v=>`"${String(v).replaceAll('"','""')}"`).join(","))].join("\n");
+  const rows=["time,type,policy,friction,gravity,score,distance,steps,fell",...history.map(h=>[
+    h.time,
+    h.type,
+    h.result.name,
+    h.friction??(h.result&&h.result.friction)??"",
+    h.gravity??(h.result&&h.result.gravity)??"",
+    h.result.score,
+    h.result.distance,
+    h.result.steps,
+    h.result.fell
+  ].map(v=>`"${String(v).replaceAll('"','""')}"`).join(","))].join("\n");
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([rows],{type:"text/csv"}));a.download="experiment_history.csv";a.click();URL.revokeObjectURL(a.href);
 };
-$("refreshBtn").onclick=()=>{health();loadPolicies()};
+$("refreshBtn").onclick=()=>{health();loadPolicies();loadCurriculum()};
 $("themeToggle").onclick=()=>{document.body.classList.toggle("light");localStorage.setItem("bipedalTheme",document.body.classList.contains("light")?"light":"dark")};
 if(localStorage.getItem("bipedalTheme")==="light")document.body.classList.add("light");
-renderHistory();health();loadPolicies();
+renderHistory();health();loadPolicies();loadCurriculum();

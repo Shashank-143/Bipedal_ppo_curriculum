@@ -114,6 +114,8 @@
           <div class="form-grid">
             <label>Policy A<select id="leftPolicy"></select></label>
             <label>Policy B<select id="rightPolicy"></select></label>
+            <label>Gravity <output id="showGravityOut">1.00</output><input id="showGravity" type="range" min=".5" max="1.5" step=".05" value="1"></label>
+            <label>Friction <output id="showFrictionOut">2.50</output><input id="showFriction" type="range" min=".2" max="3" step=".1" value="2.5"></label>
             <label>Seed<input id="showSeed" type="number" value="7"></label>
             <label class="check-label"><input id="hardcore" type="checkbox"> Hardcore mode</label>
           </div>
@@ -153,20 +155,20 @@
 
       <section id="view-curriculum" class="view">
         <div class="panel">
-          <div class="panel-head"><div><h3>Curriculum Explorer</h3><p>Configured stages from your curriculum file.</p></div></div>
-          <div class="stage-track">
-            <div class="stage active"><b>01</b><span>Beginner</span><small>Gravity 0.10</small></div>
-            <div class="stage"><b>02</b><span>Intermediate</span><small>Gravity 0.50</small></div>
-            <div class="stage"><b>03</b><span>Advanced</span><small>Gravity 0.75</small></div>
-            <div class="stage"><b>04</b><span>Expert</span><small>Gravity 1.00</small></div>
+          <div class="panel-head"><div><h3>Curriculum Explorer</h3><p>Configured stages synchronized live from the backend curriculum.</p></div></div>
+          <div class="stage-track" id="stageTrack">
+            <div class="stage active"><b>01</b><span>Beginner</span><small>Friction 2.50 · Gravity 0.60</small></div>
+            <div class="stage"><b>02</b><span>Intermediate</span><small>Friction 2.00 · Gravity 0.75</small></div>
+            <div class="stage"><b>03</b><span>Advanced</span><small>Friction 1.50 · Gravity 0.90</small></div>
+            <div class="stage"><b>04</b><span>Expert</span><small>Friction 1.00 · Gravity 1.00</small></div>
           </div>
-          <div class="table-scroll"><table><thead><tr><th>Stage</th><th>Gravity</th><th>Fall penalty</th><th>Promotion threshold</th></tr></thead><tbody>
-            <tr><td>Stage 1: Beginner</td><td>0.10</td><td>0.10</td><td>100</td></tr>
-            <tr><td>Stage 2: Intermediate</td><td>0.50</td><td>0.50</td><td>150</td></tr>
-            <tr><td>Stage 3: Advanced</td><td>0.75</td><td>0.75</td><td>250</td></tr>
-            <tr><td>Stage 4: Expert</td><td>1.00</td><td>1.00</td><td>Final stage</td></tr>
+          <div class="table-scroll"><table><thead><tr><th>Stage</th><th>Friction (μ)</th><th>Gravity</th><th>Fall penalty</th><th>Promotion threshold</th></tr></thead><tbody id="curriculumTableBody">
+            <tr><td>Stage 1: Beginner</td><td>2.50</td><td>0.60</td><td>0.10</td><td>100</td></tr>
+            <tr><td>Stage 2: Intermediate</td><td>2.00</td><td>0.75</td><td>0.50</td><td>150</td></tr>
+            <tr><td>Stage 3: Advanced</td><td>1.50</td><td>0.90</td><td>0.50</td><td>200</td></tr>
+            <tr><td>Stage 4: Expert</td><td>1.00</td><td>1.00</td><td>0.75</td><td>Final stage</td></tr>
           </tbody></table></div>
-          <div class="info-banner">The curriculum display is based on the configured stages. The current live training stage is not exposed by the existing API.</div>
+          <div class="info-banner">The curriculum stages and environment physics (gravity and terrain friction) are synchronized with the backend curriculum config.</div>
         </div>
       </section>
 
