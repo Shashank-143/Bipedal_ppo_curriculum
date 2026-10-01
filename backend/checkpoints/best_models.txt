@@ -1,0 +1,4 @@
+Stage 1: Beginner: best=278.1, final=278.1, winner=best (model_stage_1_best.pth)
+Stage 2: Intermediate: best=259.7, final=259.7, winner=best (model_stage_2_best.pth)
+Stage 3: Advanced: best=199.4, final=199.4, winner=best (model_stage_3_best.pth)
+Stage 4: Expert: best=187.3, final=241.1, winner=final (model_stage_4_final.pth)
