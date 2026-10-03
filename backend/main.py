@@ -18,7 +18,7 @@ def main():
     if args.command == "train":
         train(args.total_steps, learning_rate=args.learning_rate)
     elif args.command == "serve":
-        uvicorn.run("api.server:app", host="0.0.0.0", port=int(args.port))
+        uvicorn.run("api.server:app", host="127.0.0.1", port=int(args.port))
 
 if __name__ == "__main__":
     main()
